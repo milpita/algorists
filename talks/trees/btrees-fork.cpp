@@ -7,6 +7,7 @@
 #include <cstring>
 #include <fstream>
 #include <sstream>
+#include <iomanip>
 
 using namespace std;
 
@@ -16,7 +17,7 @@ typedef struct node {
     struct node* right;
 } NODE;
 
-NODE* create_node(int value) {
+NODE* node_create(int value) {
     NODE* node = (NODE*)malloc(sizeof(NODE));
     if (node) {
         node->data = value;
@@ -26,40 +27,40 @@ NODE* create_node(int value) {
     return node;
 }
 
-void init_tree(NODE** root) {
+void tree_init(NODE** root) {
     if (root != NULL) {
         *root = NULL;
     }
 }
 
-void free_tree(NODE* root) {
+void tree_free(NODE* root) {
     if (root != NULL) {
-        free_tree(root->left);
-        free_tree(root->right);
+        tree_free(root->left);
+        tree_free(root->right);
+        cout << setw(2) << root->data << " ";
         free(root);
-        std::cout << "freed node\n";
     }
 }
 
-void insert_tree(NODE** root, int value) {
+void tree_insert(NODE** root, int value) {
     if (*root == NULL) {
-        *root = create_node(value);
-        std::cout << "created node: " << value << "\n";
+        *root = node_create(value);
         return;
     }
     if (value < (*root)->data) {
-        insert_tree(&((*root)->left), value);
+        tree_insert(&((*root)->left), value);
     }
     else {
-        insert_tree(&((*root)->right), value);
+        tree_insert(&((*root)->right), value);
     }
 }
 
-void print_vector(std::vector<int> &a) {
-    std::cout << "original:\n";
+void print_vector(std::vector<int> &a, const char* header) {
+    std::cout << header << ":\n";
     for (auto it = a.begin(); it != a.end(); it++) {
-        std::cout << *it << ((it != a.end() - 1) ? ", " : "\n");
+        std::cout << setw(2) << *it << " ";
     }
+    std::cout << "\n";
 }
 
 void print_help(char** argv) {
@@ -68,38 +69,50 @@ void print_help(char** argv) {
     cout << "File must contain one vector per row\n";
 }
 
-int main(int argc, char** argv) {
+void validate_args(int argc, char** argv) {
     if (argc != 3) {
         print_help(argv);
-        return EXIT_FAILURE;
+        exit(EXIT_FAILURE);
     }
     if (strncmp("--file", argv[1], 6) !=0) {
         print_help(argv);
-        return EXIT_FAILURE;
+        exit(EXIT_FAILURE);
     }
+}
 
-    string s = argv[2];
-    ifstream ifs(s);
-    if (!ifs) {
+void open_file(ifstream &ifs, const char* s) {
+    ifs.open(s);
+    if (!ifs.is_open()) {
         cout << "Could not open file: " << s << "\n";
-        return EXIT_FAILURE;
+        exit(EXIT_FAILURE);
     }
+}
+
+int main(int argc, char** argv) {
+    validate_args(argc, argv);
+
+    int i;
+    string s;
+    ifstream ifs;
+    open_file(ifs, argv[2]);
+
     while (std::getline(ifs, s)) {
         std::istringstream iss(s);
         std::vector<int> v;
-        int i;
-        while (iss >> i) {
+        std::vector<int>::const_iterator it;
+        while (iss >> i)
             v.push_back(i);
+        if (!v.size())
+            continue;
+        print_vector(v, "ORIGINAL");
+
+        NODE *root;
+        tree_init(&root);
+        for (it = v.begin(); it != v.end(); it++) {
+            tree_insert(&root, *it);
         }
-        if (v.size() > 0) {
-            print_vector(v);
-            NODE *root;
-            init_tree(&root);
-            for (std::vector<int>::const_iterator it = v.begin(); it != v.end(); it++) {
-                insert_tree(&root, *it);
-            }
-            free_tree(root);
-        }
+        cout << "FREE (POST-ORDER):\n";
+        tree_free(root);
     }
     return EXIT_SUCCESS;
 }
